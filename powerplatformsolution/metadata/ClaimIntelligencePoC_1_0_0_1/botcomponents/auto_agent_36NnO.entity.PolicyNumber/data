@@ -1,0 +1,2 @@
+kind: RegexEntity
+pattern: (?i)POL-\d{4}

@@ -1,0 +1,13 @@
+kind: KnowledgeSourceConfiguration
+source:
+  kind: AzureAISearchSource
+  triggerCondition: true
+  connectionReference: auto_agent_36NnO.cr.zdvWVthq
+  indexName: rag-policies
+  selectFields:
+    - chunk_id
+    - parent_id
+    - chunk
+    - title
+    - text_vector
+  semanticConfigurationName: rag-policies-semantic-configuration

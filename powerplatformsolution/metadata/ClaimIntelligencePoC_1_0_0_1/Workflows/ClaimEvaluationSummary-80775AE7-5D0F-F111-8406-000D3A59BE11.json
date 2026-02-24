@@ -1,0 +1,509 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "skl_sharedcommondataserviceforapps_bf36e"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Skills",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "Please enter your Clain ID (e.g., CLM-XXXX)",
+                  "title": "Claim ID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "b8f61c18-7224-4f8a-9c5f-72fbce5df764"
+          }
+        }
+      },
+      "actions": {
+        "Respond_to_the_agent": {
+          "type": "Response",
+          "kind": "Skills",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "adaptive_card_body": {
+                  "title": "Adaptive Card Body",
+                  "x-ms-dynamically-added": true,
+                  "type": "string"
+                }
+              },
+              "additionalProperties": {}
+            },
+            "statusCode": 200,
+            "body": {
+              "adaptive_card_body": "@{variables('Claim Adaptive Card Body')}"
+            }
+          },
+          "runAfter": {
+            "When_Claim_is_returned": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "81c94f73-dd52-465c-ad3b-a4686da63cc3"
+          }
+        },
+        "Initialize_Adaptive_Card_Body": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Claim Adaptive Card Body",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "1c404ae1-2e13-4af9-854c-dca0f70ecba4"
+          }
+        },
+        "Get_Claim": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "entityName": "skl_claims",
+              "$filter": "skl_claimnumber eq '@{triggerBody()?['text']}'",
+              "$top": 1
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+              "operationId": "ListRecords",
+              "connectionName": "shared_commondataserviceforapps"
+            }
+          },
+          "runAfter": {
+            "Initialize_Region": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "fc48ba9d-ff87-474c-99c7-befe283d0ede"
+          }
+        },
+        "When_Claim_is_returned": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@length(outputs('Get_Claim')?['body/value'])",
+                  1
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Compose_summary": {
+              "type": "Foreach",
+              "foreach": "@outputs('Get_Claim')?['body/value']",
+              "actions": {
+                "Set_final_card_body": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "Claim Adaptive Card Body",
+                    "value": "@string(outputs('Compose_body'))"
+                  },
+                  "runAfter": {
+                    "Compose_body": [
+                      "SUCCEEDED"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "810ed049-0065-4bc2-a470-045b49fd1122"
+                  }
+                },
+                "Get_Claim_type": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "stringmaps",
+                      "$filter": "attributename eq 'skl_claimtype' and attributevalue eq @{items('Compose_summary')?['skl_claimtype']}",
+                      "$top": 1
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "95569cd8-47b8-4f7f-a60c-8e6408088851"
+                  }
+                },
+                "Set_Claim_Type": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "Claim Type",
+                    "value": "@first(outputs('Get_Claim_type')?['body/value'])?['Value']"
+                  },
+                  "runAfter": {
+                    "Get_Claim_type": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "c4ebca95-cc61-4f32-8314-f46e7301acd9"
+                  }
+                },
+                "Get_Region": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "stringmaps",
+                      "$filter": "attributename eq 'skl_region' and attributevalue eq @{item()?['skl_region']}"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "ListRecords",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "runAfter": {
+                    "Set_Claim_Type": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "c6f2e853-8439-4985-b827-a80d1aafd120"
+                  }
+                },
+                "Set_Region": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "Region",
+                    "value": "@first(outputs('Get_Region')?['body/value'])?['Value']"
+                  },
+                  "runAfter": {
+                    "Get_Region": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "98da9d2f-7b79-4d9e-8f43-75b70daff2fd"
+                  }
+                },
+                "Calculate_Risk_Score": {
+                  "type": "Workflow",
+                  "inputs": {
+                    "host": {
+                      "workflowReferenceName": "5c535cd6-3b10-f111-8406-0022480bb367"
+                    },
+                    "body": {
+                      "text": "@variables('Claim Type')",
+                      "text_1": "@variables('Region')",
+                      "number": "@items('Compose_summary')?['skl_claimamount']",
+                      "text_2": "@items('Compose_summary')?['skl_description']"
+                    }
+                  },
+                  "runAfter": {
+                    "Set_Region": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Generate_Recommendation": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "recordId": "a216de39-0447-4623-a030-f3b70b427e18",
+                      "item/requestv2/Text_20input": "@body('Calculate_Risk_Score')?['risk_factors']"
+                    },
+                    "host": {
+                      "apiId": "providers/Microsoft.ProcessSimple/operationGroups/aibuilder",
+                      "operationId": "aibuilderpredict_customprompt",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "runAfter": {
+                    "Calculate_Risk_Score": [
+                      "SUCCEEDED"
+                    ]
+                  }
+                },
+                "Log_Inquiry_and_Risk_Score": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "entityName": "skl_claimevaluationlogs",
+                      "item/skl_claimid": "@triggerBody()?['text']",
+                      "item/skl_escalation": "@body('Calculate_Risk_Score')?['escalation']",
+                      "item/skl_evaluationtimestamp": "@utcNow()",
+                      "item/skl_riskscore": "@body('Calculate_Risk_Score')?['risk_score']",
+                      "item/skl_summarylength": "@length(variables('Claim Adaptive Card Body'))",
+                      "item/skl_triggeredby": "@triggerOutputs()?['headers']?['x-ms-user-name']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                      "operationId": "CreateRecord",
+                      "connectionName": "shared_commondataserviceforapps"
+                    }
+                  },
+                  "runAfter": {
+                    "Set_final_card_body": [
+                      "SUCCEEDED"
+                    ]
+                  }
+                },
+                "Get_Policy_Indo": {
+                  "type": "Workflow",
+                  "inputs": {
+                    "host": {
+                      "workflowReferenceName": "ef75b75a-3074-ef08-d612-0f174468c1ea"
+                    },
+                    "body": {
+                      "text": "@items('Compose_summary')?['skl_policynumber']",
+                      "text_1": "@triggerBody()?['text']"
+                    }
+                  },
+                  "runAfter": {
+                    "Generate_Recommendation": [
+                      "SUCCEEDED"
+                    ]
+                  }
+                },
+                "Compose_body": {
+                  "type": "Compose",
+                  "inputs": {
+                    "type": "AdaptiveCard",
+                    "$schema": "https://adaptivecards.io/schemas/adaptive-card.json",
+                    "version": "1.5",
+                    "body": [
+                      {
+                        "type": "Container",
+                        "items": [
+                          {
+                            "type": "TextBlock",
+                            "text": "@{concat('Claim ID: ',items('Compose_summary')?['skl_claimnumber'])}",
+                            "weight": "Bolder",
+                            "size": "Medium"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "Container",
+                        "items": [
+                          {
+                            "type": "TextBlock",
+                            "text": "Claim Overview:",
+                            "wrap": true,
+                            "weight": "Bolder"
+                          },
+                          {
+                            "type": "FactSet",
+                            "facts": [
+                              {
+                                "title": "Type:",
+                                "value": "@{variables('Claim Type')}"
+                              },
+                              {
+                                "title": "Region:",
+                                "value": "@{variables('Region')}"
+                              },
+                              {
+                                "title": "Incident Date:",
+                                "value": "@{if(not(equals(items('Compose_summary')?['skl_incidentdate'],null)),formatDateTime(items('Compose_summary')?['skl_incidentdate'], 'MM/dd/yyyy'),'')}"
+                              },
+                              {
+                                "title": "Claim Created On:",
+                                "value": "@{formatDateTime(items('Compose_summary')?['createdon'], 'MM/dd/yyyy')}"
+                              },
+                              {
+                                "title": "Claim Amount:",
+                                "value": "@{formatNumber(items('Compose_summary')?['skl_claimamount'], 'C', 'en-US')}"
+                              },
+                              {
+                                "title": "Policy Number:",
+                                "value": "@{items('Compose_summary')?['skl_policynumber']}"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "TextBlock",
+                            "text": "Coverage Determination:",
+                            "wrap": true,
+                            "weight": "Bolder"
+                          },
+                          {
+                            "type": "FactSet",
+                            "facts": [
+                              {
+                                "title": "Coverage Limit:",
+                                "value": "@{body('Get_Policy_Indo')?['coverage_limit']}"
+                              },
+                              {
+                                "title": "Deductible:",
+                                "value": "@{body('Get_Policy_Indo')?['deductible']}"
+                              },
+                              {
+                                "title": "Exceeds Policy Limit:",
+                                "value": "@{if(equals(body('Get_Policy_Indo')?['exceed_policy_limit'],true),'**Yes**','No')}"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "TextBlock",
+                            "text": "Risk Assessment:",
+                            "wrap": true,
+                            "weight": "Bolder"
+                          },
+                          {
+                            "type": "FactSet",
+                            "facts": [
+                              {
+                                "title": "Risk Score:",
+                                "value": "@{formatNumber(body('Calculate_Risk_Score')?['risk_score'],'0.00')} @{if(greaterOrEquals(body('Calculate_Risk_Score')?['risk_score'],0.7),'**(High)**',if(greaterOrEquals(body('Calculate_Risk_Score')?['risk_score'],0.4),'(Medium)','(Low)'))}"
+                              },
+                              {
+                                "title": "**Escalation Required:**",
+                                "value": "@{if(equals(body('Calculate_Risk_Score')?['escalation'],true),'**Yes**','No')}"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "TextBlock",
+                            "text": "Recommendation:",
+                            "wrap": true,
+                            "weight": "Bolder"
+                          },
+                          {
+                            "type": "TextBlock",
+                            "text": "@{outputs('Generate_Recommendation')?['body/responsev2/predictionOutput/text']}",
+                            "wrap": true
+                          },
+                          {
+                            "type": "TextBlock",
+                            "text": "Risk Explanation:",
+                            "wrap": true,
+                            "weight": "Bolder"
+                          },
+                          {
+                            "type": "TextBlock",
+                            "text": "@{body('Get_Policy_Indo')?['risk_explanation']}",
+                            "wrap": true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "runAfter": {
+                    "Get_Policy_Indo": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "e48e0928-bb2d-4f4f-b7e1-fb8f65a871fb"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Log_Inquiry": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "entityName": "skl_claimevaluationlogs",
+                    "item/skl_claimid": "@triggerBody()?['text']"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                    "operationId": "CreateRecord",
+                    "connectionName": "shared_commondataserviceforapps"
+                  }
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Get_Claim": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b3d63f7e-94fe-4df2-885b-ada47edf06f1"
+          }
+        },
+        "Initialize_Claim_Type": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Claim Type",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_Adaptive_Card_Body": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "572b78a3-9ebc-4a17-b75f-00ec11fb5246"
+          }
+        },
+        "Initialize_Region": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Region",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_Claim_Type": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f169cf22-e25c-4d60-bb6e-cab0a0ca0c25"
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

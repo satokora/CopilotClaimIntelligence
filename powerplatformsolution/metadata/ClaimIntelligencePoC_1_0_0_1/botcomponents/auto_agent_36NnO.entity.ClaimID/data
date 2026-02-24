@@ -1,0 +1,2 @@
+kind: RegexEntity
+pattern: (?i)CLM-\d{4}

@@ -1,0 +1,244 @@
+{
+  "properties": {
+    "connectionReferences": {},
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "Risk Scoring Function URL (skl_RiskScoringFunctionURL)": {
+          "defaultValue": "<function url>",
+          "type": "String",
+          "metadata": {
+            "schemaName": "skl_RiskScoringFunctionURL"
+          }
+        },
+        "Risk Scoring Function Key (skl_RiskScoringFunctionKey)": {
+          "defaultValue": "<function key>",
+          "type": "String",
+          "metadata": {
+            "schemaName": "skl_RiskScoringFunctionKey"
+          }
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "Please enter your input",
+                  "title": "Claim Type",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "Please enter your input",
+                  "title": "Region",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "number": {
+                  "description": "Please enter a number",
+                  "title": "Claim Amount",
+                  "type": "number",
+                  "x-ms-content-hint": "NUMBER",
+                  "x-ms-dynamically-added": true
+                },
+                "text_2": {
+                  "description": "Please enter your input",
+                  "title": "Description",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1",
+                "number",
+                "text_2"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Call_Function_App": {
+          "type": "Http",
+          "inputs": {
+            "uri": "@parameters('Risk Scoring Function URL (skl_RiskScoringFunctionURL)')",
+            "method": "POST",
+            "headers": {
+              "Content-Type": "application/json",
+              "x-functions-key": "@{parameters('Risk Scoring Function Key (skl_RiskScoringFunctionKey)')}"
+            },
+            "body": {
+              "claimAmount": "@triggerBody()?['number']",
+              "region": "@triggerBody()?['text_1']",
+              "claimType": "@triggerBody()?['text']",
+              "description": "@triggerBody()?['text_2']"
+            }
+          },
+          "runAfter": {
+            "Initialize_Risk_Factors": [
+              "SUCCEEDED"
+            ]
+          },
+          "runtimeConfiguration": {
+            "contentTransfer": {
+              "transferMode": "Chunked"
+            }
+          }
+        },
+        "Respond_to_a_Power_App_or_flow": {
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "risk_score": {
+                  "title": "Risk Score",
+                  "type": "number",
+                  "x-ms-content-hint": "NUMBER",
+                  "x-ms-dynamically-added": true
+                },
+                "risk_factors": {
+                  "title": "Risk Factors",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "escalation": {
+                  "title": "Escalation",
+                  "type": "boolean",
+                  "x-ms-content-hint": "BOOLEAN",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "additionalProperties": {}
+            },
+            "statusCode": 200,
+            "body": {
+              "risk_score": "@body('Parse_JSON')?['riskScore']",
+              "risk_factors": "@{outputs('Compose')}",
+              "escalation": "@body('Parse_JSON')?['escalation']"
+            }
+          },
+          "runAfter": {
+            "Compose": [
+              "SUCCEEDED"
+            ]
+          }
+        },
+        "Initialize_Risk_Factors": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Risk Factors",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {}
+        },
+        "Parse_JSON": {
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Call_Function_App')",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "riskScore": {
+                  "type": "number"
+                },
+                "escalation": {
+                  "type": "boolean"
+                },
+                "riskFactors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Call_Function_App": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Set_Risk_Factors": {
+          "type": "SetVariable",
+          "inputs": {
+            "name": "Risk Factors",
+            "value": "@body('Parse_JSON')?['riskFactors']"
+          },
+          "runAfter": {
+            "Parse_JSON": [
+              "SUCCEEDED"
+            ]
+          }
+        },
+        "If_Escalation_is_required": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@body('Parse_JSON')?['escalation']",
+                  "@true"
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Append_to_array_variable": {
+              "type": "AppendToArrayVariable",
+              "inputs": {
+                "name": "Risk Factors",
+                "value": "Escalation Required"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Set_Risk_Factors": [
+              "SUCCEEDED"
+            ]
+          }
+        },
+        "Compose": {
+          "type": "Compose",
+          "inputs": "@join(variables('Risk Factors'),',')",
+          "runAfter": {
+            "If_Escalation_is_required": [
+              "SUCCEEDED"
+            ]
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

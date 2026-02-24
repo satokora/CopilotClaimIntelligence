@@ -1,0 +1,351 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_azureaisearch": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "auto_agent_36NnO.cr.zdvWVthq"
+        },
+        "api": {
+          "name": "shared_azureaisearch"
+        }
+      },
+      "shared_commondataserviceforapps": {
+        "impersonation": {},
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "skl_sharedcommondataserviceforapps_bf36e"
+        },
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "description": "Please enter your input",
+                  "title": "Policy ID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "text_1": {
+                  "description": "Please enter your input",
+                  "title": "Claim ID",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "required": [
+                "text",
+                "text_1"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Semantic_Hybrid_Search": {
+          "runAfter": {
+            "Initialize_variable_3": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "indexName": "<index name>",
+              "semanticHybridSearchRequest/searchText": "Policy Number eq '@{triggerBody()?['text']}'",
+              "semanticHybridSearchRequest/selectFields": [
+                "chunk"
+              ],
+              "semanticHybridSearchRequest/top": 1
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_azureaisearch",
+              "operationId": "SemanticHybridSearch",
+              "connectionName": "shared_azureaisearch"
+            }
+          }
+        },
+        "Parse_JSON": {
+          "runAfter": {
+            "Semantic_Hybrid_Search": [
+              "Succeeded"
+            ]
+          },
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@body('Semantic_Hybrid_Search')",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "chunk_id": {
+                    "type": "string"
+                  },
+                  "parent_id": {
+                    "type": "string"
+                  },
+                  "chunk": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "chunk"
+                ]
+              }
+            }
+          }
+        },
+        "For_each": {
+          "foreach": "@outputs('Parse_JSON')['body']",
+          "actions": {
+            "Run_a_prompt": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "recordId": "7bb58ed7-8eeb-498c-946f-782f2918137e",
+                  "item/requestv2/Claim_20ID": "@triggerBody()?['text_1']",
+                  "item/requestv2/Chunk_20input": "@items('For_each')['chunk']"
+                },
+                "host": {
+                  "apiId": "providers/Microsoft.ProcessSimple/operationGroups/aibuilder",
+                  "operationId": "aibuilderpredict_customprompt",
+                  "connectionName": "shared_commondataserviceforapps"
+                }
+              }
+            },
+            "Parse_JSON_1": {
+              "runAfter": {
+                "Run_a_prompt": [
+                  "Succeeded"
+                ]
+              },
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@outputs('Run_a_prompt')?['body/responsev2/predictionOutput/text']",
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "coverageEligible": {
+                      "type": "boolean"
+                    },
+                    "coverageLimit": {
+                      "type": "string"
+                    },
+                    "deductible": {
+                      "type": "string"
+                    },
+                    "exceedsPolicyLimit": {
+                      "type": "boolean"
+                    },
+                    "riskExplanation": {
+                      "type": "string"
+                    },
+                    "recommendation": {
+                      "type": "string"
+                    },
+                    "confidenceLevel": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "Set_variable": {
+              "runAfter": {
+                "Parse_JSON_1": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "Coverage Limit",
+                "value": "@body('Parse_JSON_1')?['coverageLimit']"
+              }
+            },
+            "Set_variable_1": {
+              "runAfter": {
+                "Set_variable": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "Deductible",
+                "value": "@body('Parse_JSON_1')?['deductible']"
+              }
+            },
+            "Set_variable_2": {
+              "runAfter": {
+                "Set_variable_1": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "Exceed Policy Limit",
+                "value": "@body('Parse_JSON_1')?['exceedsPolicyLimit']"
+              }
+            },
+            "Set_variable_3": {
+              "runAfter": {
+                "Set_variable_2": [
+                  "Succeeded"
+                ]
+              },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "Risk Explanation",
+                "value": "@body('Parse_JSON_1')?['riskExplanation']"
+              }
+            }
+          },
+          "runAfter": {
+            "Parse_JSON": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach"
+        },
+        "Initialize_variable": {
+          "runAfter": {},
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Coverage Limit",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Initialize_variable_1": {
+          "runAfter": {
+            "Initialize_variable": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Deductible",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Initialize_variable_2": {
+          "runAfter": {
+            "Initialize_variable_1": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Exceed Policy Limit",
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "Initialize_variable_3": {
+          "runAfter": {
+            "Initialize_variable_2": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "Risk Explanation",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Respond_to_a_Power_App_or_flow": {
+          "runAfter": {
+            "For_each": [
+              "Succeeded"
+            ]
+          },
+          "type": "Response",
+          "kind": "PowerApp",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "coverage_limit": {
+                  "title": "Coverage Limit",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "deductible": {
+                  "title": "Deductible",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                },
+                "exceed_policy_limit": {
+                  "title": "Exceed Policy Limit",
+                  "type": "boolean",
+                  "x-ms-content-hint": "BOOLEAN",
+                  "x-ms-dynamically-added": true
+                },
+                "risk_explanation": {
+                  "title": "Risk Explanation",
+                  "type": "string",
+                  "x-ms-content-hint": "TEXT",
+                  "x-ms-dynamically-added": true
+                }
+              },
+              "additionalProperties": {}
+            },
+            "statusCode": 200,
+            "body": {
+              "coverage_limit": "@{variables('Coverage Limit')}",
+              "deductible": "@{variables('Deductible')}",
+              "exceed_policy_limit": "@variables('Exceed Policy Limit')",
+              "risk_explanation": "@{variables('Risk Explanation')}"
+            }
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

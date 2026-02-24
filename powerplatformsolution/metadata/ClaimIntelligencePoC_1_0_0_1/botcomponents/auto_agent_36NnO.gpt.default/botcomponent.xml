@@ -1,0 +1,11 @@
+<botcomponent schemaname="auto_agent_36NnO.gpt.default">
+  <componenttype>15</componenttype>
+  <description>AI-powered assistant that evaluates insurance claims using policy retrieval, risk scoring, and structured assessment summaries.</description>
+  <iscustomizable>0</iscustomizable>
+  <name>Claim Intelligence Agent</name>
+  <parentbotid>
+    <schemaname>auto_agent_36NnO</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

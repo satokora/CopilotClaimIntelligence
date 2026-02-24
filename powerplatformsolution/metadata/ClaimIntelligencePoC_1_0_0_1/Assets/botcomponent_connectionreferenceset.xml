@@ -1,0 +1,5 @@
+<botcomponent_connectionreferenceset>
+  <botcomponent_connectionreference botcomponentid.schemaname="auto_agent_36NnO.topic.Agent1AzureAISearch_nEKCELq5xfbqPK2WxxOjU" connectionreferenceid.connectionreferencelogicalname="auto_agent_36NnO.cr.zdvWVthq">
+    <iscustomizable>1</iscustomizable>
+  </botcomponent_connectionreference>
+</botcomponent_connectionreferenceset>

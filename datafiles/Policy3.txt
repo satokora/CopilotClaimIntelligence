@@ -1,0 +1,19 @@
+Policy Number: POL-3001
+
+Coverage:
+
+Fire damage up to $200,000
+
+Theft up to $75,000
+
+Natural disaster up to $150,000
+
+Deductible:
+
+$2,500 per incident
+
+Exclusions:
+
+Flood damage without flood rider
+
+Wear and tear

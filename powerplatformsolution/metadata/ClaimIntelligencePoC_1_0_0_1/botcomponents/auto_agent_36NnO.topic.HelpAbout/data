@@ -1,0 +1,44 @@
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    triggerQueries:
+      - help
+      - about
+      - how does this work
+      - what can you do
+      - information about this service
+      - tell me about yourself
+      - need assistance
+      - who are you
+      - how can I get help
+
+  actions:
+    - kind: SendActivity
+      id: sendActivity_8QRvBt
+      activity: |-
+        This assistant supports claims adjusters in evaluating insurance claims efficiently and consistently.
+
+        **Claim Evaluation**
+        - Validates policy coverage eligibility
+        - Applies rule-based risk scoring
+        - Generates structured claim summaries
+        - Recommends escalation when applicable
+
+        **Policy Coverage Retrieval**
+        - Retrieves coverage limits
+        - Identifies deductibles
+        - Lists exclusions
+
+    - kind: SendActivity
+      id: sendActivity_MnLMLw
+      activity: |-
+        **Example Requests**
+        - “Evaluate claim CLM-XXXX”
+        - “Review claim CLM-XXXX”
+        - “What is covered under POL-XXXX?”
+        - “Show deductible for premium auto policy”
+
+inputType: {}
+outputType: {}

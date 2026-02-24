@@ -1,0 +1,10 @@
+<botcomponent schemaname="auto_agent_36NnO.topic.HelpAbout">
+  <componenttype>9</componenttype>
+  <iscustomizable>0</iscustomizable>
+  <name>Help/About</name>
+  <parentbotid>
+    <schemaname>auto_agent_36NnO</schemaname>
+  </parentbotid>
+  <statecode>0</statecode>
+  <statuscode>1</statuscode>
+</botcomponent>

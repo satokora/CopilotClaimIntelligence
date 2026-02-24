@@ -1,0 +1,96 @@
+kind: AdaptiveDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: VarClaimId
+    description: |-
+      Extract the claim ID if present.
+      A claim ID follows the pattern: CLM-####.
+    entity:
+      kind: RegexEntityReference
+      entityId: auto_agent_36NnO.entity.ClaimID
+
+    shouldPromptUser: true
+
+modelDescription: "This tool can handle queries like these: evaluate CLM, evaluate claim, start claim evaluation, review my claim, assess my insurance claim, check status of my claim"
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    triggerQueries:
+      - evaluate claim
+      - start claim evaluation
+      - review my claim
+      - assess my insurance claim
+      - check status of my claim
+      - process a claim
+      - claim assessment
+      - how do I evaluate a claim?
+      - help with evaluating a claim
+
+  actions:
+    - kind: ConditionGroup
+      id: conditionGroup_rj1nhy
+      conditions:
+        - id: conditionItem_94pixp
+          condition: =!IsBlank(Topic.VarClaimId)
+
+      elseActions:
+        - kind: Question
+          id: question_Yiix3G
+          interruptionPolicy:
+            allowInterruption: true
+
+          variable: Topic.VarClaimId
+          prompt: "Please provide a Claim ID (e.g., CLM-1001):"
+          entity:
+            kind: RegexEntityReference
+            entityId: auto_agent_36NnO.entity.ClaimID
+
+    - kind: InvokeFlowAction
+      id: invokeFlowAction_4ArQdb
+      input:
+        binding:
+          text: =Topic.VarClaimId
+
+      output:
+        binding:
+          adaptive_card_body: Topic.AdaptiveCardBody
+
+      flowId: 80775ae7-5d0f-f111-8406-000d3a59be11
+
+    - kind: ConditionGroup
+      id: conditionGroup_mviYlg
+      conditions:
+        - id: conditionItem_vi9nyj
+          condition: =!IsBlank(Topic.AdaptiveCardBody)
+          actions:
+            - kind: SendActivity
+              id: sendActivity_D8BZ7d
+              activity:
+                text:
+                  - "Thank you. Here's the Claim Evaluation Summary:"
+                attachments:
+                  - kind: AdaptiveCardTemplate
+                    cardContent: =Topic.AdaptiveCardBody
+
+            - kind: EndDialog
+              id: 38NgGy
+
+      elseActions:
+        - kind: SendActivity
+          id: sendActivity_i5FiUP
+          activity: Sorry, no claim is found with the given ID. Please provide a different Claim ID (e.g., CLM-1001)
+
+        - kind: EndDialog
+          id: NheHTa
+
+inputType:
+  properties:
+    VarClaimId:
+      displayName: VarClaimId
+      description: |-
+        Extract the claim ID if present.
+        A claim ID follows the pattern: CLM-####.
+      type: String
+
+outputType: {}
