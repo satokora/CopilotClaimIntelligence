@@ -11,6 +11,9 @@ Developed by Satoko Kora
 
 
 ## Scenario
+
+[Project overview document](https://github.com/satokora/CopilotClaimIntelligence/blob/feedf2aab08d5146401c2da935a319441b91eb0b/PoC%20Copilot%20Claims%20Intelligence%20Agent.pdf)
+
 A claims adjuster receives a new claim and must efficiently determine coverage eligibility, assess financial and compliance risk, and prepare a structured summary for review.
 
 The Enterprise Claims Intelligence Copilot assists by retrieving relevant policy coverage details using RAG, applying rule-based risk scoring, and generating a standardized claim assessment summary.
